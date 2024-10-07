@@ -19,7 +19,7 @@ export const animationControllerHandler: RockideHandler = {
           if (queryRange) {
             return molangQueries.map((query) => `${prefix}.${query}`);
           }
-          if (document.getWordRangeAtPosition(position, /math\.\w+/)) {
+          if (document.getWordRangeAtPosition(position, /math\.(\w+)?/)) {
             return molangMath;
           }
           return [];
