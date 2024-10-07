@@ -24,19 +24,23 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("rockide.reloadWorkspace", () => rockide.indexWorkspace()),
-    vscode.languages.registerCompletionItemProvider(selector, {
-      provideCompletionItems(document, position) {
-        for (const handler of fileHandlers) {
-          if (isMatch(document.uri.fsPath, handler.pattern)) {
-            if (handler.process) {
-              const ctx = createContext(document, position);
-              const completions = handler.process(ctx, rockide)?.completions?.();
-              return completions?.map((value) => ctx.createCompletion(value));
+    vscode.languages.registerCompletionItemProvider(
+      selector,
+      {
+        provideCompletionItems(document, position) {
+          for (const handler of fileHandlers) {
+            if (isMatch(document.uri.fsPath, handler.pattern)) {
+              if (handler.process) {
+                const ctx = createContext(document, position);
+                const completions = handler.process(ctx, rockide)?.completions?.();
+                return completions?.map((value) => ctx.createCompletion(value));
+              }
             }
           }
-        }
+        },
       },
-    }),
+      ".",
+    ),
     vscode.languages.registerDefinitionProvider(selector, {
       provideDefinition(document, position) {
         for (const handler of fileHandlers) {
