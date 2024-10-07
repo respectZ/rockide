@@ -4,6 +4,7 @@ import * as vscode from "vscode";
 import { baseGlob, projectGlob } from "./constants";
 import { createContext } from "./context";
 import { fileHandlers } from "./handlers";
+import { SemanticMolang, legend } from "./handlers/semantics/molang";
 import { Rockide } from "./rockide";
 
 const selector: vscode.DocumentSelector = [
@@ -21,8 +22,10 @@ export async function activate(context: vscode.ExtensionContext) {
   console.log("Rockide activated!");
   await rockide.indexWorkspace();
 
+  console.time("register");
   context.subscriptions.push(
     vscode.commands.registerCommand("rockide.reloadWorkspace", () => rockide.indexWorkspace()),
+    vscode.languages.registerDocumentSemanticTokensProvider(selector, new SemanticMolang(), legend),
     vscode.languages.registerCompletionItemProvider(
       selector,
       {
@@ -105,6 +108,7 @@ export async function activate(context: vscode.ExtensionContext) {
       }
     }),
   );
+  console.timeEnd("register");
 }
 
 export function deactivate() {}

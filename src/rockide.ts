@@ -18,9 +18,11 @@ export type AssetData = {
 
 export class Rockide {
   diagnostics = vscode.languages.createDiagnosticCollection("rockide");
+  mcfunctionDiagnostic = vscode.languages.createDiagnosticCollection("rockide-mcfunction");
   files = new Map<string, JSONC.Node>();
   assets: AssetData[] = [];
   jsonAssets: AssetData[] = [];
+  mcfunctions = new Map<string, string>();
 
   async checkWorkspace() {
     for (const path of await vscode.workspace.findFiles("**/manifest.json")) {
@@ -47,7 +49,7 @@ export class Rockide {
     vscode.window.withProgress(
       { title: "Indexing", location: vscode.ProgressLocation.Notification },
       async (progress) => {
-        const fileList = await vscode.workspace.findFiles(`**/${projectGlob}/**/*.json`, "{.*,build}/**");
+        const fileList = await vscode.workspace.findFiles(`**/${projectGlob}/**/*.{json,mcfunction}`, "{.*,build}/**");
         const increment = 100 / fileList.length;
         for (const uri of fileList) {
           progress.report({ message: relative(workspace.uri.fsPath, uri.fsPath), increment });
@@ -185,5 +187,9 @@ export class Rockide {
 
   getTradeTables() {
     return this.jsonAssets.filter(({ bedrockPath: path }) => path.startsWith("trading/"));
+  }
+
+  getMcfunctions() {
+    return this.mcfunctions;
   }
 }
