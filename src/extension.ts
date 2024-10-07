@@ -5,7 +5,6 @@ import { baseGlob, projectGlob } from "./constants";
 import { createContext } from "./context";
 import { fileHandlers } from "./handlers";
 import { Rockide } from "./rockide";
-import { getResourceAssetPath } from "./utils/path";
 
 const selector: vscode.DocumentSelector = [
   { scheme: "file", language: "json" },
@@ -71,10 +70,8 @@ export async function activate(context: vscode.ExtensionContext) {
           continue;
         }
         if (uri.fsPath.match(/\.(png|tga|fsb|ogg|wav)$/)) {
-          const path = getResourceAssetPath(uri.fsPath);
-          if (path) {
-            rockide.assets.push({ uri, bedrockPath: path });
-          }
+          rockide.indexAsset(uri);
+          continue;
         }
       }
     }),

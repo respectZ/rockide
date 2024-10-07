@@ -4,7 +4,6 @@ import { relative } from "path";
 import * as vscode from "vscode";
 import { bpGlob, NullNode, projectGlob, rpGlob } from "./constants";
 import { fileHandlers } from "./handlers";
-import { getBehaviorAssetPath, getResourceAssetPath } from "./utils/path";
 
 export type IndexedData = {
   path: string;
@@ -71,17 +70,26 @@ export class Rockide {
         const document = await vscode.workspace.openTextDocument(uri);
         const root = JSONC.parseTree(document.getText()) ?? NullNode;
         this.files.set(uri.fsPath, root);
-      } else {
-        this.jsonAssets.push({ uri, bedrockPath: getBehaviorAssetPath(uri.fsPath) });
+        break;
+      }
+      const path = uri.fsPath.replaceAll("\\", "/").split(/(behavior_pack|[^\\/]*?bp|bp_[^\\/]*?)\//i)[2];
+      if (path) {
+        this.jsonAssets.push({
+          uri,
+          bedrockPath: path,
+        });
       }
       break;
     }
   }
 
   indexAsset(uri: vscode.Uri) {
-    const path = getResourceAssetPath(uri.fsPath);
+    const path = uri.fsPath.replaceAll("\\", "/").split(/(resource_pack|[^\\/]*?rp|rp_[^\\/]*?)\//i)[2];
     if (path) {
-      this.assets.push({ uri, bedrockPath: path });
+      this.assets.push({
+        uri,
+        bedrockPath: path.replace(/\.\w+$/, ""),
+      });
     }
   }
 
