@@ -1,0 +1,62 @@
+{
+  "name": "rockide",
+  "displayName": "Rockide",
+  "description": "Integrated development environment for Minecraft Bedrock",
+  "version": "0.0.1",
+  "author": "ink0rr",
+  "publisher": "ink0rr",
+  "main": "./out/extension.js",
+  "engines": {
+    "vscode": "^1.94.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "Minecraft",
+    "Bedrock"
+  ],
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "fmt": "prettier . --write",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "dependencies": {
+    "jsonc-parser": "^3.3.1",
+    "micromatch": "^4.0.8"
+  },
+  "devDependencies": {
+    "@types/micromatch": "^4.0.9",
+    "@types/mocha": "^10.0.8",
+    "@types/node": "^20.16.10",
+    "@types/vscode": "^1.94.0",
+    "@typescript-eslint/eslint-plugin": "^8.8.0",
+    "@typescript-eslint/parser": "^8.8.0",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.12.0",
+    "prettier": "^3.3.3",
+    "prettier-plugin-organize-imports": "^4.1.0",
+    "typescript": "^5.6.2"
+  },
+  "activationEvents": [
+    "onLanguage:json",
+    "onLanguage:jsonc",
+    "workspaceContains:**/*.mcfunction",
+    "workspaceContains:**/*.mcstructure",
+    "workspaceContains:**/*.mcworld"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "rockide.reloadWorkspace",
+        "title": "Reload Workspace",
+        "category": "Rockide"
+      }
+    ]
+  }
+}
