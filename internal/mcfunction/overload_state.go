@@ -143,16 +143,19 @@ func (o *overloadState) matchParameter(input []rune, tokens []lexer.Token, token
 				if tokenIndex+1 < len(tokens) && tokens[tokenIndex+1].Kind == lexer.TokenMap {
 					next := tokens[tokenIndex+1]
 					advance = 2
-					selArg := createSelectorArg(input, next)
-					if selArg == nil {
-						arg.addChild(&NodeArg{
-							Node: &Node{
-								kind:  NodeKindCommandArg,
-								start: next.Start,
-								end:   next.End,
-							},
-							paramKind: ParameterKindSelectorArg,
-						})
+					selArg := &NodeArg{
+						Node: &Node{
+							kind:  NodeKindCommandArg,
+							start: next.Start,
+							end:   next.End,
+						},
+						paramKind: ParameterKindSelectorArg,
+					}
+					pairs := createPairs(input, next, SelectorArg)
+					if len(pairs) > 0 {
+						for _, p := range pairs {
+							selArg.addChild(p)
+						}
 					}
 					arg.addChild(selArg)
 					arg.Node.end = tokens[tokenIndex+1].End

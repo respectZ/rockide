@@ -23,6 +23,7 @@ const (
 	ParameterKindSelector                  // @p, @a, @r, @s, @e, @n, @initiator
 	ParameterKindSelectorArg               // selector arguments
 	ParameterKindMap                       // [key=value,...]
+	ParameterKindMapJSON                   // Just a map but with { } wrapping, {key=value,...}
 	ParameterKindJSON                      // JSON object or array
 	ParameterKindVector2                   // x y or rotX rotY
 	ParameterKindVector3                   // x y z
@@ -83,8 +84,9 @@ type ParameterSpec struct {
 	Literals []string     // only for ParameterKindLiteral
 	Range    *NumberRange // For number, integer, and range
 	Tags     []string
-	Greedy   bool   // only for KindString
-	Suffix   string // only for KindSuffixedInteger
+	Greedy   bool     // only for KindString
+	Suffix   string   // only for KindSuffixedInteger
+	MapSpec  *MapSpec // only for KindMap and KindMapJSON
 }
 
 func (p ParameterSpec) ToString() string {
@@ -108,4 +110,42 @@ func (p ParameterSpec) ToString() string {
 type NumberRange struct {
 	Min float64
 	Max float64
+}
+
+type MapSpec struct {
+	mapSpec map[string]*ParameterSpec
+	spec    *ParameterSpec
+}
+
+func newMapSpec(spec map[string]*ParameterSpec) *MapSpec {
+	return &MapSpec{
+		mapSpec: spec,
+	}
+}
+
+func newSingleMapSpec(spec *ParameterSpec) *MapSpec {
+	return &MapSpec{
+		spec: spec,
+	}
+}
+
+func (m *MapSpec) GetSpec(key string) (*ParameterSpec, bool) {
+	if m.mapSpec != nil {
+		s, ok := m.mapSpec[key]
+		return s, ok
+	}
+	return m.spec, m.spec != nil
+}
+
+func (m *MapSpec) Keys() []string {
+	if m.mapSpec != nil {
+		keys := make([]string, len(m.mapSpec))
+		i := 0
+		for k := range m.mapSpec {
+			keys[i] = k
+			i++
+		}
+		return keys
+	}
+	return []string{}
 }

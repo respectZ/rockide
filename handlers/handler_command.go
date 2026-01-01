@@ -41,11 +41,21 @@ func (h *CommandHandler) Parse(uri protocol.DocumentURI) error {
 		if !ok {
 			return true
 		}
+		walkChild := true
+		tags := []string{}
 		param, ok := arg.ArgParamSpec()
-		if !ok {
-			return true
+		if ok {
+			tags = param.Tags
 		}
-		for _, tag := range param.Tags {
+		pair, ok := arg.(mcfunction.INodeArgPair)
+		if ok {
+			walkChild = false
+			pairSpec, ok := pair.PairSpec()
+			if ok {
+				tags = slices.Concat(tags, pairSpec.Tags)
+			}
+		}
+		for _, tag := range tags {
 			entry, ok := commandEntries[tag]
 			if !ok || entry.Store == nil {
 				continue
@@ -64,7 +74,7 @@ func (h *CommandHandler) Parse(uri protocol.DocumentURI) error {
 				},
 			})
 		}
-		return true
+		return walkChild
 	})
 	return nil
 }
@@ -82,11 +92,11 @@ func (h *CommandHandler) Delete(uri protocol.DocumentURI) {
 
 func (h *CommandHandler) Completions(document *textdocument.TextDocument, position protocol.Position) []protocol.CompletionItem {
 	result := []protocol.CompletionItem{}
-	context := h.parseLine(document, position)
-	root := context.Root
-	rOffset := context.RelativeOffset
-	startOffset := context.StartOffset
-	line := context.Content
+	parsed := h.parseLine(document, position)
+	root := parsed.Root
+	rOffset := parsed.RelativeOffset
+	startOffset := parsed.StartOffset
+	line := parsed.Content
 
 	node := mcfunction.NodeAt(root, rOffset)
 	rStart, rEnd := node.Range()
@@ -98,6 +108,8 @@ func (h *CommandHandler) Completions(document *textdocument.TextDocument, positi
 		Start: document.PositionAt(startOffset + rStart),
 		End:   document.PositionAt(startOffset + rEnd),
 	}
+	log.Printf("Node Kind: %v", node.Kind())
+	log.Printf("Node Text: %s", node.Text(line))
 	switch node.Kind() {
 	case mcfunction.NodeKindFile:
 		result = h.commandCompletions(cursorRange)
@@ -107,20 +119,8 @@ func (h *CommandHandler) Completions(document *textdocument.TextDocument, positi
 		arg, ok := node.(mcfunction.INodeArg)
 		if ok {
 			switch arg.ParamKind() {
-			case mcfunction.ParameterKindSelectorArg:
-				for k := range mcfunction.SelectorArg {
-					result = append(result, protocol.CompletionItem{
-						Label: k,
-						Kind:  protocol.FieldCompletion,
-						TextEdit: &protocol.Or_CompletionItem_textEdit{
-							Value: protocol.TextEdit{
-								NewText: k,
-								Range:   cursorRange,
-							},
-						},
-					})
-				}
-				return result
+			case mcfunction.ParameterKindSelectorArg, mcfunction.ParameterKindMapPair:
+				return h.argSelectorCompletions(arg, cursorRange, nodeRange)
 			case mcfunction.ParameterKindRawMessage:
 				doc := document.CreateVirtualDocument(nodeRange)
 				rawMessage.CommandHandler = h
@@ -146,7 +146,7 @@ func (h *CommandHandler) Completions(document *textdocument.TextDocument, positi
 			log.Printf("Failed to cast node to INodeCommand")
 			return result
 		}
-		result = h.paramCompletions(nodeCommand, cursorRange)
+		result = h.paramCompletinos(nodeCommand, cursorRange)
 	}
 	return result
 }
@@ -174,7 +174,7 @@ func (h *CommandHandler) commandCompletions(editRange protocol.Range) []protocol
 	return result
 }
 
-func (h *CommandHandler) paramCompletions(node mcfunction.INodeCommand, editRange protocol.Range) []protocol.CompletionItem {
+func (h *CommandHandler) innerCompletions(node mcfunction.INodeCommand, paramSpec *mcfunction.ParameterSpec, editRange protocol.Range) []protocol.CompletionItem {
 	result := []protocol.CompletionItem{}
 	set := mapset.NewThreadUnsafeSet[string]()
 	escape := func(s string) string {
@@ -206,8 +206,8 @@ func (h *CommandHandler) paramCompletions(node mcfunction.INodeCommand, editRang
 			},
 		})
 	}
-	var addCompletions func(param mcfunction.ParameterSpec)
-	addCompletions = func(param mcfunction.ParameterSpec) {
+	var paramCompletions func(param mcfunction.ParameterSpec)
+	paramCompletions = func(param mcfunction.ParameterSpec) {
 		if len(param.Literals) > 0 {
 			for _, lit := range param.Literals {
 				addItem(escape(lit), protocol.KeywordCompletion)
@@ -253,8 +253,10 @@ func (h *CommandHandler) paramCompletions(node mcfunction.INodeCommand, editRang
 			addItem("*")
 			addItem("0")
 		case mcfunction.ParameterKindChainedCommand:
-			for _, o := range node.OverloadStates() {
-				addCompletions(o.Parameters()[0])
+			if node != nil {
+				for _, o := range node.OverloadStates() {
+					paramCompletions(o.Parameters()[0])
+				}
 			}
 		case mcfunction.ParameterKindCommand:
 			for name := range h.Parser.RegisteredCommands() {
@@ -280,15 +282,7 @@ func (h *CommandHandler) paramCompletions(node mcfunction.INodeCommand, editRang
 		}
 	}
 	tagSet := mapset.NewThreadUnsafeSet[string]()
-	for _, o := range node.OverloadStates() {
-		if !o.Matched() {
-			continue
-		}
-		param, ok := o.Peek()
-		if !ok {
-			continue
-		}
-		addCompletions(param)
+	tagCompletions := func(param mcfunction.ParameterSpec) {
 		for _, tag := range param.Tags {
 			if tagSet.ContainsOne(tag) {
 				continue
@@ -315,7 +309,70 @@ func (h *CommandHandler) paramCompletions(node mcfunction.INodeCommand, editRang
 			}
 		}
 	}
+	if node != nil {
+		for _, o := range node.OverloadStates() {
+			if !o.Matched() {
+				continue
+			}
+			param, ok := o.Peek()
+			if !ok {
+				continue
+			}
+			paramCompletions(param)
+			tagCompletions(param)
+		}
+	}
+	if paramSpec != nil {
+		paramCompletions(*paramSpec)
+		tagCompletions(*paramSpec)
+	}
 	return result
+}
+
+func (h *CommandHandler) paramCompletinos(node mcfunction.INodeCommand, editRange protocol.Range) []protocol.CompletionItem {
+	return h.innerCompletions(node, nil, editRange)
+}
+
+func (h *CommandHandler) paramSpecCompletions(spec *mcfunction.ParameterSpec, editRange protocol.Range) []protocol.CompletionItem {
+	return h.innerCompletions(nil, spec, editRange)
+}
+
+func (h *CommandHandler) argSelectorCompletions(node mcfunction.INodeArg, cursorRange protocol.Range, nodeRange protocol.Range) []protocol.CompletionItem {
+	argCompletions := func(editRange protocol.Range) []protocol.CompletionItem {
+		keys := mcfunction.SelectorArg.Keys()
+		result := make([]protocol.CompletionItem, len(keys))
+		for i, key := range keys {
+			result[i] = protocol.CompletionItem{
+				Label: key,
+				Kind:  protocol.FieldCompletion,
+				TextEdit: &protocol.Or_CompletionItem_textEdit{
+					Value: protocol.TextEdit{
+						NewText: key,
+						Range:   editRange,
+					},
+				},
+			}
+		}
+		return result
+	}
+	pair, ok := node.(mcfunction.INodeArgPairChild)
+	if ok {
+		kind := pair.PairKind()
+		switch kind {
+		case mcfunction.PairKindKey:
+			return argCompletions(nodeRange)
+		case mcfunction.PairKindEqual:
+			pairSpec, ok := pair.PairSpec()
+			if ok {
+				return h.paramSpecCompletions(pairSpec, cursorRange)
+			}
+		}
+	}
+	_, ok = node.(mcfunction.INodeArgPair)
+	if !ok {
+		return argCompletions(cursorRange)
+	}
+	return []protocol.CompletionItem{}
 }
 
 func (h *CommandHandler) Definitions(document *textdocument.TextDocument, position protocol.Position) []protocol.LocationLink {
