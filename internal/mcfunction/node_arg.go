@@ -2,8 +2,8 @@ package mcfunction
 
 type INodeArg interface {
 	INode
+	INodeParamSpec
 	ParamKind() ParameterKind
-	ArgParamSpec() (ParameterSpec, bool)
 }
 
 type NodeArg struct {
@@ -79,11 +79,11 @@ func (n *NodeArg) IsInside(pos uint32) bool {
 	return n.start <= pos && pos < n.end
 }
 
-func (n *NodeArg) ArgParamSpec() (ParameterSpec, bool) {
+func (n *NodeArg) ParamSpec() (ParameterSpec, bool) {
 	commandNode, ok := n.parent.(INodeCommand)
 	if !ok {
 		return ParameterSpec{}, false
 	}
 	argIndex := n.index
-	return commandNode.ParamSpec(argIndex)
+	return commandNode.ParamSpecAt(argIndex)
 }

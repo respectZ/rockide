@@ -5,9 +5,7 @@ import (
 )
 
 // TODO: Create a parent for this INodeArgPair.
-// It's just a INodeArg with PairsSpec method, but having a separate interface.
-
-// TODO: Create interface INodeSpec, with ParamSpec method. This creates another layer of abstraction for INodeArg and INodeArgPair.
+// It's just a INodeArg with MapPairSpec method, but having a separate interface.
 
 type PairKind uint8
 
@@ -17,11 +15,6 @@ const (
 	PairKindEqual
 	PairKindValue
 )
-
-type INodeArgPair interface {
-	INodeArg
-	PairSpec() (*ParameterSpec, bool)
-}
 
 type NodeArgPair struct {
 	*NodeArg
@@ -42,14 +35,16 @@ func (n *NodeArgPair) setIndex(index int) {
 	n.index = index
 }
 
-func (n *NodeArgPair) PairSpec() (*ParameterSpec, bool) {
-	return n.spec, n.spec != nil
+func (n *NodeArgPair) ParamSpec() (ParameterSpec, bool) {
+	if n.spec != nil {
+		return *n.spec, true
+	}
+	return ParameterSpec{}, false
 }
 
 type INodeArgPairChild interface {
-	INodeArgPair
+	INodeArg
 	PairKind() PairKind
-	PairSpec() (*ParameterSpec, bool)
 }
 
 type NodeArgPairChild struct {
@@ -75,14 +70,14 @@ func (n *NodeArgPairChild) PairKind() PairKind {
 	return n.pairKind
 }
 
-func (n *NodeArgPairChild) PairSpec() (*ParameterSpec, bool) {
+func (n *NodeArgPairChild) ParamSpec() (ParameterSpec, bool) {
 	if p, ok := n.parent.(*NodeArgPair); ok {
-		return p.PairSpec()
+		return p.ParamSpec()
 	}
-	return nil, false
+	return ParameterSpec{}, false
 }
 
-func createPairs(input []rune, token lexer.Token, spec *MapSpec) []INodeArgPair {
+func createPairs(input []rune, token lexer.Token, spec *MapSpec) []*NodeArgPair {
 	value := []rune(token.Text(input))
 	startOffset := token.Start + 1
 	value = value[1 : len(value)-1]
@@ -90,7 +85,7 @@ func createPairs(input []rune, token lexer.Token, spec *MapSpec) []INodeArgPair 
 	keyTokens := []lexer.Token{}
 	var assignToken lexer.Token
 	valueTokens := []lexer.Token{}
-	createPair := func() INodeArgPair {
+	createPair := func() *NodeArgPair {
 		start := assignToken.Start + startOffset
 		end := assignToken.End + startOffset
 		tKey, kOk := mergeTokens(keyTokens...)
@@ -165,7 +160,7 @@ func createPairs(input []rune, token lexer.Token, spec *MapSpec) []INodeArgPair 
 		assignToken = lexer.Token{}
 		return node
 	}
-	pairs := []INodeArgPair{}
+	pairs := []*NodeArgPair{}
 	state := 0
 	for t := range lex.Next() {
 		if t.Kind == lexer.TokenComment || t.Kind == lexer.TokenWhitespace {
@@ -187,10 +182,13 @@ func createPairs(input []rune, token lexer.Token, spec *MapSpec) []INodeArgPair 
 			case lexer.TokenComma:
 				state = 0
 				pairs = append(pairs, createPair())
-			case lexer.TokenMap:
-				// TODO: nested map
-			case lexer.TokenJSON:
-				// TODO: nested json (not really json)
+			// case lexer.TokenMap, lexer.TokenJSON:
+			// 	valueTokens = append(valueTokens, t)
+			// 	if len(valueTokens) == 1 {
+			// 		state = 0
+			// 		nested := createPairs(input, t, nil)
+			// 		// pairs = append(pairs, createPair())
+			// 	}
 			default:
 				valueTokens = append(valueTokens, t)
 			}

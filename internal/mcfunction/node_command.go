@@ -6,7 +6,7 @@ type INodeCommand interface {
 	Args() []INode
 	Spec() *Spec
 	OverloadStates() []*overloadState
-	ParamSpec(index int) (ParameterSpec, bool)
+	ParamSpecAt(index int) (ParameterSpec, bool)
 	IsValid() bool
 }
 
@@ -54,7 +54,7 @@ func (n *NodeCommand) OverloadStates() []*overloadState {
 	return n.overloadStates
 }
 
-func (n *NodeCommand) ParamSpec(index int) (ParameterSpec, bool) {
+func (n *NodeCommand) ParamSpecAt(index int) (ParameterSpec, bool) {
 	for _, o := range n.overloadStates {
 		if !o.matched {
 			continue

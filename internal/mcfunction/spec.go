@@ -99,8 +99,9 @@ func (p ParameterSpec) ToString() string {
 	}
 	if p.Optional {
 		s = "[" + s + "]"
+	} else {
+		s = "<" + s + ">"
 	}
-	s = "<" + s + ">"
 	if p.Kind == ParameterKindSuffixedInteger && p.Suffix != "" {
 		s += p.Suffix
 	}
