@@ -1,11 +1,5 @@
 package mcfunction
 
-type INodeArg interface {
-	INode
-	INodeParamSpec
-	ParamKind() ParameterKind
-}
-
 type NodeArg struct {
 	*Node
 	paramKind ParameterKind

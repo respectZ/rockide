@@ -8,9 +8,9 @@ var permissionValueSpec = &ParameterSpec{
 	},
 }
 
-var SelectorArg = newMapSpec(map[string]*ParameterSpec{
+var SelectorArg = NewMapSpec(map[string]*ParameterSpec{
 	"c": {
-		Kind: ParameterKindNumber,
+		Kind: ParameterKindInteger,
 	},
 	"dx": {
 		Kind: ParameterKindRelativeNumber,
@@ -27,13 +27,13 @@ var SelectorArg = newMapSpec(map[string]*ParameterSpec{
 	},
 	"has_property": {
 		Kind: ParameterKindMapJSON,
-		MapSpec: newSingleMapSpec(&ParameterSpec{
+		MapSpec: NewMapValueSpec(nil, &ParameterSpec{
 			Kind: ParameterKindBoolean,
 		}),
 	},
 	"hasitem": {
 		Kind: ParameterKindMapJSON,
-		MapSpec: newMapSpec(map[string]*ParameterSpec{
+		MapSpec: NewMapSpec(map[string]*ParameterSpec{
 			"data": {
 				Kind: ParameterKindInteger,
 			},
@@ -70,7 +70,7 @@ var SelectorArg = newMapSpec(map[string]*ParameterSpec{
 	},
 	"haspermission": {
 		Kind: ParameterKindMapJSON,
-		MapSpec: newMapSpec(map[string]*ParameterSpec{
+		MapSpec: NewMapSpec(map[string]*ParameterSpec{
 			"camera":           permissionValueSpec,
 			"dismount":         permissionValueSpec,
 			"jump":             permissionValueSpec,
@@ -136,7 +136,7 @@ var SelectorArg = newMapSpec(map[string]*ParameterSpec{
 	},
 	"scores": {
 		Kind: ParameterKindMapJSON,
-		MapSpec: newSingleMapSpec(&ParameterSpec{
+		MapSpec: NewMapValueSpec(nil, &ParameterSpec{
 			Kind: ParameterKindRange,
 		}),
 	},

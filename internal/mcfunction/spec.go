@@ -115,22 +115,31 @@ type NumberRange struct {
 
 type MapSpec struct {
 	mapSpec map[string]*ParameterSpec
+	keySpec *ParameterSpec
 	spec    *ParameterSpec
 }
 
-func newMapSpec(spec map[string]*ParameterSpec) *MapSpec {
+func NewMapSpec(spec map[string]*ParameterSpec) *MapSpec {
 	return &MapSpec{
 		mapSpec: spec,
 	}
 }
 
-func newSingleMapSpec(spec *ParameterSpec) *MapSpec {
+func NewMapValueSpec(key *ParameterSpec, value *ParameterSpec) *MapSpec {
 	return &MapSpec{
-		spec: spec,
+		keySpec: key,
+		spec:    value,
 	}
 }
 
-func (m *MapSpec) GetSpec(key string) (*ParameterSpec, bool) {
+func (m *MapSpec) KeySpec() (*ParameterSpec, bool) {
+	if m.keySpec != nil {
+		return m.keySpec, true
+	}
+	return nil, false
+}
+
+func (m *MapSpec) ValueSpec(key string) (*ParameterSpec, bool) {
 	if m.mapSpec != nil {
 		s, ok := m.mapSpec[key]
 		return s, ok

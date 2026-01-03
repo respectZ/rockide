@@ -1,15 +1,5 @@
 package mcfunction
 
-type INodeCommand interface {
-	INode
-	CommandName() string
-	Args() []INode
-	Spec() *Spec
-	OverloadStates() []*overloadState
-	ParamSpecAt(index int) (ParameterSpec, bool)
-	IsValid() bool
-}
-
 type NodeCommand struct {
 	*Node
 	name           string
